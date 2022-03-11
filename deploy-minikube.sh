@@ -30,18 +30,16 @@ done
 # Check app is serving the html page in the cluster
 kubectl exec "$(kubectl get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
 
+# sudo minikube tunnel -p minikube-istio
+
 # Deploy Gateway and Virtual Service
 kubectl apply -f demo-resources/bookinfo-gateway.yaml
 
-# sudo minikube tunnel -p minikube-istio
-# http://127.0.0.1/productpage
-
-echo "sudo minikube tunnel -p minikube-istio"
-echo "http://127.0.0.1/productpage"
-
+# Deploy kiali
 kubectl apply -f demo-resources/addons
 kubectl rollout status deployment/kiali -n istio-system
-istioctl dashboard kiali
+
+cd demo-resources/keys
 
 # root CA and private key
 openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=mydomain Inc./CN=mydomain.com' -keyout mydomain.com.key -out mydomain.com.crt
@@ -53,12 +51,23 @@ openssl x509 -req -sha256 -days 365 -CA mydomain.com.crt -CAkey mydomain.com.key
 # ingress secret with keys
 kubectl create -n istio-system secret tls example-credential --key=example.mydomain.com.key --cert=example.mydomain.com.crt
 
+cd ../..
+
 # /etc/hosts:
 # 127.0.0.1        httpbin.example.com
 # 127.0.0.1        example.mydomain.com
 
+
+# istioctl dashboard kiali
+echo "run:
+istioctl dashboard kiali
+"
+# sudo minikube tunnel -p minikube-istio
+echo "run:
+sudo minikube tunnel -p minikube-istio
+"
+
 # add mydomain.com.crt to firefox and open in browser
-https://example.mydomain.com:443/productpage
+# https://example.mydomain.com:443/productpage
 
 curl -vvvv https://example.mydomain.com:443/status/418 --cacert mydomain.com.crt
-
