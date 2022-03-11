@@ -10,7 +10,7 @@ istioctl install --set profile=demo -y
 kubectl label namespace default istio-injection=enabled
 
 # Apply the Bookinfo demo 
-kubectl apply -f istio-1.13.1/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -f demo-resources/bookinfo.yaml
 
 # Check all the pods are running
 PODS=$(kubectl get pod | awk '{print $1}' | tail -n +2)
@@ -31,7 +31,7 @@ done
 kubectl exec "$(kubectl get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
 
 # Deploy Gateway and Virtual Service
-kubectl apply -f istio-1.13.1/samples/bookinfo/networking/bookinfo-gateway.yaml
+kubectl apply -f demo-resources/bookinfo-gateway.yaml
 
 # sudo minikube tunnel -p minikube-istio
 # http://127.0.0.1/productpage
@@ -39,6 +39,26 @@ kubectl apply -f istio-1.13.1/samples/bookinfo/networking/bookinfo-gateway.yaml
 echo "sudo minikube tunnel -p minikube-istio"
 echo "http://127.0.0.1/productpage"
 
-kubectl apply -f istio-1.13.1/samples/addons
+kubectl apply -f demo-resources/addons
 kubectl rollout status deployment/kiali -n istio-system
 istioctl dashboard kiali
+
+# root CA and private key
+openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=mydomain Inc./CN=mydomain.com' -keyout mydomain.com.key -out mydomain.com.crt
+
+# certificate and private key
+openssl req -out example.mydomain.com.csr -newkey rsa:2048 -nodes -keyout example.mydomain.com.key -subj "/CN=example.mydomain.com/O=example organization"
+openssl x509 -req -sha256 -days 365 -CA mydomain.com.crt -CAkey mydomain.com.key -set_serial 0 -in example.mydomain.com.csr -out example.mydomain.com.crt
+
+# ingress secret with keys
+kubectl create -n istio-system secret tls example-credential --key=example.mydomain.com.key --cert=example.mydomain.com.crt
+
+# /etc/hosts:
+# 127.0.0.1        httpbin.example.com
+# 127.0.0.1        example.mydomain.com
+
+# add mydomain.com.crt to firefox and open in browser
+https://example.mydomain.com:443/productpage
+
+curl -vvvv https://example.mydomain.com:443/status/418 --cacert mydomain.com.crt
+
