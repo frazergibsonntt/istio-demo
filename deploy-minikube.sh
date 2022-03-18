@@ -70,4 +70,4 @@ sudo minikube tunnel -p minikube-istio
 # add mydomain.com.crt to firefox and open in browser
 # https://example.mydomain.com:443/productpage
 
-curl -vvvv https://example.mydomain.com:443/status/418 --cacert mydomain.com.crt
+# curl -vvvv https://example.mydomain.com:443/productpage --cacert demo-resources/keys/mydomain.com.crt
